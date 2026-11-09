@@ -33,12 +33,14 @@ def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     properties.register_scene_properties()
+    utils.bootstrap()
     keymaps.register()
 
 
 def unregister():
     keymaps.unregister()
     utils.stop_smooth()
+    utils.reset_bootstrap()
     properties.unregister_scene_properties()
     for cls in reversed(CLASSES):
         try:

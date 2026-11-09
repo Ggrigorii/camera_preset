@@ -2,6 +2,8 @@
 
 from bpy.types import Panel
 
+from . import utils
+
 
 class CAMPRESET_PT_panel(Panel):
     bl_idname = "CAMPRESET_PT_panel"
@@ -13,8 +15,17 @@ class CAMPRESET_PT_panel(Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        presets = scene.cam_presets
+        utils.bootstrap(context)
+        prefs = utils.storage(context)
+
+        if prefs is None:
+            box = layout.box()
+            box.label(text="Enable the add-on to use presets", icon='ERROR')
+            return
+
+        presets = prefs.presets
         camera = scene.camera
+        controller = getattr(scene, "cam_presets_controller", None)
 
         box = layout.box()
         column = box.column(align=True)
@@ -22,6 +33,10 @@ class CAMPRESET_PT_panel(Panel):
             column.label(text="No active scene camera", icon='ERROR')
         else:
             column.label(text="Target: {}".format(camera.name), icon='CAMERA_DATA')
+        column.prop(scene, "cam_presets_controller", text="Rig")
+
+        if camera is not None and controller is None and len(camera.constraints) > 0:
+            column.label(text="Camera has constraints: set Rig", icon='ERROR')
 
         row = layout.row(align=True)
         row.operator("cam_preset.save", text="Save New", icon='ADD')
@@ -35,10 +50,10 @@ class CAMPRESET_PT_panel(Panel):
         layout.template_list(
             "CAMPRESET_UL_list",
             "",
-            scene,
-            "cam_presets",
-            scene,
-            "cam_presets_index",
+            prefs,
+            "presets",
+            prefs,
+            "presets_index",
             rows=6,
         )
 
@@ -58,12 +73,14 @@ class CAMPRESET_PT_panel(Panel):
             row.prop(scene, "cam_presets_keyframe", text="Keyframe", toggle=True)
             row.prop(scene, "cam_presets_smooth", text="Smooth", toggle=True)
 
-            index = min(scene.cam_presets_index, len(presets) - 1)
+            index = min(prefs.presets_index, len(presets) - 1)
             preset = presets[index]
             box = layout.box()
             column = box.column(align=True)
             if preset.camera_name:
                 column.label(text="From: {}".format(preset.camera_name))
+            if preset.controller_name:
+                column.label(text="Rig: {}".format(preset.controller_name))
             if preset.camera_type == 'PERSP':
                 column.label(text="Lens: {:.1f} mm".format(preset.lens))
             elif preset.camera_type == 'ORTHO':
@@ -71,18 +88,16 @@ class CAMPRESET_PT_panel(Panel):
             else:
                 column.label(text="Panoramic")
             if preset.use_dof:
-                column.label(
-                    text="DOF: f/{:.1f}".format(preset.aperture_fstop)
-                )
+                column.label(text="DOF: f/{:.1f}".format(preset.aperture_fstop))
 
-            row = layout.row()
-            row.operator(
-                "cam_preset.reset_scene", text="Remove All Presets", icon='TRASH'
-            )
+            row = layout.row(align=True)
+            row.operator("cam_preset.restore_defaults", text="Defaults", icon='FILE_NEW')
+            row.operator("cam_preset.reset_scene", text="Remove All", icon='TRASH')
         else:
             column = layout.column(align=True)
             column.label(text="No presets yet.", icon='INFO')
             column.label(text="Set up your camera and press Save New.")
+            layout.operator("cam_preset.restore_defaults", icon='FILE_NEW')
 
         row = layout.row(align=True)
         row.operator("cam_preset.export", text="Export", icon='EXPORT')

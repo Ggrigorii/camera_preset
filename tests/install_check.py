@@ -6,13 +6,14 @@ Run against an isolated profile so the user's Blender setup is untouched:
     blender --background --factory-startup --python tests/install_check.py
 """
 
+import glob
 import os
 import sys
 
 import bpy
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-ZIP = os.path.join(ROOT, "dist", "camera_preset_manager-1.1.0.zip")
+DIST = os.path.join(ROOT, "dist")
 MODULE = "bl_ext.user_default.camera_preset_manager"
 
 FAILURES = []
@@ -30,12 +31,15 @@ def check(condition, message):
 
 def main():
     print("[install]")
-    check(os.path.exists(ZIP), "package exists: {}".format(ZIP))
-    if not os.path.exists(ZIP):
+    packages = sorted(glob.glob(os.path.join(DIST, "*.zip")))
+    check(bool(packages), "package found in {}".format(DIST))
+    if not packages:
         raise SystemExit(1)
+    package = packages[-1]
+    print("  using : {}".format(package))
 
     result = bpy.ops.extensions.package_install_files(
-        filepath=ZIP,
+        filepath=package,
         repo="user_default",
         enable_on_install=True,
         overwrite=True,
@@ -86,10 +90,12 @@ def main():
     data.lens = 135.0
 
     check(bpy.ops.cam_preset.save() == {'FINISHED'}, "save works from the installed package")
+    # The library also holds the factory presets, so use the active index.
+    index = prefs.presets_index
     camera.location = (0.0, 0.0, 0.0)
     data.lens = 18.0
     check(
-        bpy.ops.cam_preset.apply(preset_index=0) == {'FINISHED'},
+        bpy.ops.cam_preset.apply(preset_index=index) == {'FINISHED'},
         "apply works from the installed package",
     )
     check(

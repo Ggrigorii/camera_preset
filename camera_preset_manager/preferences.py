@@ -1,9 +1,16 @@
-"""Add-on preferences."""
+"""Add-on preferences: also the global preset library storage."""
 
-from bpy.props import BoolProperty, EnumProperty, FloatProperty
+from bpy.props import (
+    BoolProperty,
+    CollectionProperty,
+    EnumProperty,
+    FloatProperty,
+    IntProperty,
+)
 from bpy.types import AddonPreferences
 
 from . import keymaps
+from .properties import CAMPRESET_PG_preset
 
 
 def _update_keymaps(self, context):
@@ -12,6 +19,15 @@ def _update_keymaps(self, context):
 
 class CAMPRESET_AP_preferences(AddonPreferences):
     bl_idname = __package__
+
+    # --- global preset library, shared by every window and every .blend file ---
+    presets: CollectionProperty(type=CAMPRESET_PG_preset)
+    presets_index: IntProperty(name="Active Preset", default=0, min=0)
+    seeded: BoolProperty(
+        name="Defaults Seeded",
+        default=False,
+        description="Internal flag: factory presets were already loaded",
+    )
 
     register_keymaps: BoolProperty(
         name="Register Hotkeys",
@@ -37,6 +53,13 @@ class CAMPRESET_AP_preferences(AddonPreferences):
 
     def draw(self, context):
         layout = self.layout
+
+        column = layout.column(align=True)
+        column.label(text="Preset library: {} preset(s)".format(len(self.presets)))
+        column.label(
+            text="Stored in the add-on preferences: shared by all windows and files.",
+            icon='INFO',
+        )
 
         column = layout.column(align=True)
         column.prop(self, "register_keymaps")

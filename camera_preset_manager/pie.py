@@ -2,6 +2,8 @@
 
 from bpy.types import Menu
 
+from . import utils
+
 MAX_SLOTS = 8
 
 
@@ -13,14 +15,18 @@ class CAMPRESET_MT_pie(Menu):
         layout = self.layout
         pie = layout.menu_pie()
 
-        scene = context.scene
-        presets = scene.cam_presets
+        prefs = utils.storage(context)
+        if prefs is None:
+            pie.label(text="Enable the add-on first", icon='ERROR')
+            return
+
+        presets = prefs.presets
         count = len(presets)
-        active_index = scene.cam_presets_index
+        active_index = prefs.presets_index
 
         slots = []
         if count == 0:
-            slots.append(("save", None, "Save New Preset"))
+            slots.append(("defaults", None, "Add Default Presets"))
         else:
             visible = min(count, MAX_SLOTS)
             for index in range(visible):
@@ -45,6 +51,8 @@ class CAMPRESET_MT_pie(Menu):
                 pie.operator("cam_preset.save", text=text, icon='ADD')
             elif kind == "update":
                 pie.operator("cam_preset.update", text=text, icon='FILE_REFRESH')
+            elif kind == "defaults":
+                pie.operator("cam_preset.restore_defaults", text=text, icon='FILE_NEW')
             elif kind == "more":
                 pie.menu("CAMPRESET_MT_list", text=text, icon='COLLAPSEMENU')
             else:
@@ -59,9 +67,13 @@ class CAMPRESET_MT_list(Menu):
 
     def draw(self, context):
         layout = self.layout
-        scene = context.scene
-        presets = scene.cam_presets
-        active_index = scene.cam_presets_index
+        prefs = utils.storage(context)
+        if prefs is None:
+            layout.label(text="Enable the add-on first", icon='ERROR')
+            return
+
+        presets = prefs.presets
+        active_index = prefs.presets_index
 
         if not presets:
             layout.label(text="No presets yet", icon='INFO')

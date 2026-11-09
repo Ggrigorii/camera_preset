@@ -1,4 +1,4 @@
-"""Property groups and scene level storage for Camera Preset Manager."""
+"""Property groups and storage declarations for Camera Preset Manager."""
 
 import bpy
 from bpy.props import (
@@ -8,6 +8,7 @@ from bpy.props import (
     FloatProperty,
     FloatVectorProperty,
     IntProperty,
+    PointerProperty,
     StringProperty,
 )
 from bpy.types import PropertyGroup
@@ -55,9 +56,11 @@ CHANNEL_KEYS = {'ALL', 'TRANSFORM', 'OPTICS', 'DOF'}
 PRESET_FIELDS = (
     'name',
     'camera_name',
+    'controller_name',
     'rotation_mode',
     'matrix_basis',
     'delta_matrix',
+    'controller_matrix',
     'camera_type',
     'lens',
     'sensor_width',
@@ -70,6 +73,7 @@ PRESET_FIELDS = (
     'ortho_scale',
     'panorama_type',
     'use_dof',
+    'has_focus_object',
     'focus_distance',
     'aperture_fstop',
     'focus_object_name',
@@ -86,6 +90,11 @@ class CAMPRESET_PG_preset(PropertyGroup):
         default="",
         description="Camera this preset was captured from",
     )
+    controller_name: StringProperty(
+        name="Controller",
+        default="",
+        description="Object driving the camera through constraints (usually an empty)",
+    )
 
     # --- transform: properties of the Object, not of the camera data ---
     rotation_mode: EnumProperty(
@@ -101,6 +110,12 @@ class CAMPRESET_PG_preset(PropertyGroup):
     )
     delta_matrix: FloatVectorProperty(
         name="Delta Matrix",
+        size=16,
+        default=IDENTITY_16,
+        precision=4,
+    )
+    controller_matrix: FloatVectorProperty(
+        name="Controller Matrix",
         size=16,
         default=IDENTITY_16,
         precision=4,
@@ -129,6 +144,11 @@ class CAMPRESET_PG_preset(PropertyGroup):
 
     # --- depth of field ---
     use_dof: BoolProperty(name="Use Depth of Field", default=False)
+    has_focus_object: BoolProperty(
+        name="Has Focus Object",
+        default=False,
+        description="Whether the camera used a focus object instead of a focus distance",
+    )
     focus_distance: FloatProperty(name="Focus Distance", default=10.0, unit='LENGTH')
     aperture_fstop: FloatProperty(name="F-Stop", default=2.8, min=0.0, soft_max=128.0)
     focus_object_name: StringProperty(
@@ -141,14 +161,21 @@ class CAMPRESET_PG_preset(PropertyGroup):
 def register_scene_properties():
     Scene = bpy.types.Scene
 
+    # Storage moved to the add-on preferences (shared by every window and file).
+    # The scene collection is kept only so presets saved by 1.1 can be migrated.
     if not hasattr(Scene, "cam_presets"):
         Scene.cam_presets = CollectionProperty(type=CAMPRESET_PG_preset)
     if not hasattr(Scene, "cam_presets_index"):
         Scene.cam_presets_index = IntProperty(
-            name="Active Preset",
+            name="Active Preset (legacy)",
             default=0,
             min=0,
-            description="Index of the active camera preset",
+        )
+    if not hasattr(Scene, "cam_presets_controller"):
+        Scene.cam_presets_controller = PointerProperty(
+            type=bpy.types.Object,
+            name="Controller",
+            description="Object driving the camera through constraints, usually an empty",
         )
     if not hasattr(Scene, "cam_presets_channels"):
         Scene.cam_presets_channels = EnumProperty(
@@ -176,6 +203,7 @@ def unregister_scene_properties():
     for attribute in (
         "cam_presets",
         "cam_presets_index",
+        "cam_presets_controller",
         "cam_presets_channels",
         "cam_presets_keyframe",
         "cam_presets_smooth",
