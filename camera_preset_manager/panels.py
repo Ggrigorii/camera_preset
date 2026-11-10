@@ -15,7 +15,12 @@ class CAMPRESET_PT_panel(Panel):
     def draw(self, context):
         layout = self.layout
         scene = context.scene
-        utils.bootstrap(context)
+
+        # See operators._ensure_bootstrap: tolerate a stale utils module.
+        bootstrap = getattr(utils, "bootstrap", None)
+        if bootstrap is not None:
+            bootstrap(context)
+
         prefs = utils.storage(context)
 
         if prefs is None:

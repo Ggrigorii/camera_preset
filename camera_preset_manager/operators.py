@@ -6,8 +6,19 @@ from bpy.types import Operator
 from . import utils
 
 
+def _ensure_bootstrap(context):
+    """Seed the library if registration could not do it yet.
+
+    Tolerates an out-of-date ``utils`` module left by a partial reinstall, so a
+    stale file cannot raise AttributeError on every click.
+    """
+    function = getattr(utils, "bootstrap", None)
+    if function is not None:
+        function(context)
+
+
 def _presets(context):
-    utils.bootstrap(context)
+    _ensure_bootstrap(context)
     return utils.preset_list(context)
 
 

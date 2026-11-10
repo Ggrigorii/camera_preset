@@ -609,6 +609,38 @@ def test_empty_scene():
     )
 
 
+def test_partial_install():
+    print("[partial install]")
+    module = sys.modules[MODULE]
+    util = module.utils
+    saved = getattr(util, "bootstrap", None)
+    try:
+        module.unregister()
+        delattr(util, "bootstrap")
+        try:
+            module.register()
+            registered = True
+        except Exception as error:  # noqa: BLE001
+            registered = False
+            print("  error : {}".format(error))
+        check(registered, "register survives a stale utils module")
+
+        window_manager = bpy.context.window_manager
+        if window_manager is not None and window_manager.keyconfigs.addon is not None:
+            keymap = window_manager.keyconfigs.addon.keymaps.get("3D View")
+            check(
+                keymap is not None and len(keymap.keymap_items) >= 2,
+                "hotkeys still registered with a stale utils module",
+            )
+    finally:
+        try:
+            module.unregister()
+        except Exception:  # noqa: BLE001
+            pass
+        setattr(util, "bootstrap", saved)
+        module.register()
+
+
 def test_reload():
     print("[reload]")
     module = sys.modules[MODULE]
@@ -652,6 +684,7 @@ def main():
     test_duplicate_and_move(scene)
     test_json_roundtrip(scene)
     test_empty_scene()
+    test_partial_install()
     test_reload()
 
     print()
