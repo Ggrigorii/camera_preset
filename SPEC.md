@@ -355,6 +355,9 @@ blender --background --factory-startup --python tests/run_tests.py
 
 ## 11. Дорожная карта (после v1.2)
 
+Ближайшая переделка расписана отдельно — см. **`TODO.md`** (v1.3): автосоздание связки
+камеры с пустышкой, судьба `Keyframe`/`Smooth`, `passepartout_alpha` в пресете.
+
 - v1.3: превью-миниатюры (`render.opengl` в `bpy.data.images`), поле `preview_image` в пресете.
 - v1.3: плавная интерполяция `lens` и `focus_distance` как опция.
 - v1.4: хук-API для сторонних аддонов (шейк, линзы, физическая камера).
